@@ -204,14 +204,25 @@ void bar_refresh(struct bar *bar)
     float time_line_width = 0;
     struct tm *timeinfo = localtime(&rawtime);
     if (timeinfo) {
-        char time[255];
-        snprintf(time, sizeof(time), "%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min);
+
+        // TODO: refactoring probably in order
+        char* am_pm = "AM";
+        if (timeinfo->tm_hour >= 12) {
+            if (timeinfo->tm_hour != 12)
+                timeinfo->tm_hour -= 12;
+            am_pm = "PM";
+        } else if (timeinfo->tm_hour == 0) {
+            timeinfo->tm_hour = 12;
+        }
+
+        char time[280];
+        snprintf(time, sizeof(time), "%02d:%02d:%02d %s", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, am_pm);
         struct bar_line time_line = bar_prepare_line(bar->t_font, time, bar->foreground_color);
         CGPoint t_pos = bar_align_line(bar, time_line, ALIGN_RIGHT, ALIGN_CENTER);
-        bar_draw_line(bar, time_line, t_pos.x, t_pos.y);
+        bar_draw_line(bar, time_line, t_pos.x-23, t_pos.y);
 
         CGPoint ti_pos = bar_align_line(bar, bar->clock_icon, 0, ALIGN_CENTER);
-        ti_pos.x = t_pos.x - bar->clock_icon.bounds.size.width - 5;
+        ti_pos.x = t_pos.x - bar->clock_icon.bounds.size.width - 30;
 
         CGPoint tu_pos = bar_align_line(bar, bar->clock_underline, 0, ALIGN_BOTTOM);
         tu_pos.x = tu_pos.x - bar->clock_underline.bounds.size.width / 2 - time_line.bounds.size.width / 2 - (bar->clock_icon.bounds.size.width + 5) / 2;
@@ -230,20 +241,24 @@ void bar_refresh(struct bar *bar)
         char batt[255];
         snprintf(batt, sizeof(batt), "%' '3d%%", percent);
 
+        // Draw value
         struct bar_line batt_line = bar_prepare_line(bar->t_font, batt, bar->foreground_color);
         CGPoint p_pos = bar_align_line(bar, batt_line, ALIGN_RIGHT, ALIGN_CENTER);
-        p_pos.x = p_pos.x - time_line_width - bar->clock_underline.bounds.size.width - 20;
+        // Inintial leftmost position of the battery value
+        p_pos.x = p_pos.x - time_line_width - bar->clock_underline.bounds.size.width - 40;
         bar_draw_line(bar, batt_line, p_pos.x, p_pos.y);
 
+        // Draw icon
         struct bar_line batt_icon = charging ? bar->power_icon : bar->battr_icon;
         CGPoint pi_pos = bar_align_line(bar, batt_icon, 0, ALIGN_CENTER);
         pi_pos.x = p_pos.x - batt_icon.bounds.size.width - 5;
 
+        // Draw underline
         CGPoint pu_pos = bar_align_line(bar, bar->power_underline, 0, ALIGN_BOTTOM);
         pu_pos.x = pu_pos.x - bar->power_underline.bounds.size.width / 2 - batt_line.bounds.size.width / 2 - (batt_icon.bounds.size.width + 5) / 2;
 
         bar_draw_line(bar, batt_icon, pi_pos.x, pi_pos.y);
-        bar_draw_line(bar, bar->power_underline, pu_pos.x, pu_pos.y);
+        bar_draw_line(bar, bar->power_underline, pu_pos.x-2, pu_pos.y);
         bar_destroy_line(batt_line);
 
         initial_bar_right_x = pu_pos.x - 10;
@@ -342,7 +357,7 @@ void bar_set_text_font(struct bar *bar, char *font_string)
     bar->t_font = bar_create_font(bar->t_font_prop);
     bar->space_underline = bar_prepare_line(bar->t_font, "______", rgba_color_from_hex(0xffd4d232));
     bar->power_underline = bar_prepare_line(bar->t_font, "__________", rgba_color_from_hex(0xffd75f5f));
-    bar->clock_underline = bar_prepare_line(bar->t_font, "__________", rgba_color_from_hex(0xff458588));
+    bar->clock_underline = bar_prepare_line(bar->t_font, "__________________", rgba_color_from_hex(0xff458588));
     bar_refresh(bar);
 }
 
